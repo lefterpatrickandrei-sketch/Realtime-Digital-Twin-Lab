@@ -1,0 +1,8 @@
+{
+  "name": "Real-Time 1:1 Motion Tracking Digital Twin Lab",
+  "description": "Real-time 1:1 motion tracking digital twin featuring a 54-DOF articulated humanoid robot, 60-120Hz exponential damping, 1€ smoothing, VRM/GLB model retargeting, and velocity-sensitive 3D virtual piano.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

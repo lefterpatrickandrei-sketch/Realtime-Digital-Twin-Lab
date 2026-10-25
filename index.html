@@ -3,92 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Real-Time 1:1 Motion Tracking Digital Twin | Crash-Test Dummy</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Real-Time 1:1 Motion Tracking Digital Twin Lab</title>
+  <meta name="description" content="Real-time 1:1 motion tracking digital twin featuring a 54-DOF articulated humanoid robot, 60-120Hz exponential damping, 1€ smoothing, VRM/GLB model retargeting, and velocity-sensitive 3D virtual piano.">
+  <meta property="og:title" content="Real-Time 1:1 Motion Tracking Digital Twin Lab">
+  <meta property="og:description" content="Real-time 1:1 motion tracking digital twin featuring a 54-DOF articulated humanoid robot, 60-120Hz exponential damping, 1€ smoothing, VRM/GLB model retargeting, and velocity-sensitive 3D virtual piano.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- MediaPipe Holistic via CDN for guaranteed runtime compatibility -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <!-- 3D Three.js Viewport -->
-  <div id="canvas-container"></div>
-
-  <!-- Top-Left HUD: Title & Mode -->
-  <div id="hud-header" class="hud-panel">
-    <div class="logo-badge">
-      <div class="dummy-icon">⚡</div>
-      <div class="title-wrap">
-        <h1>Digital Twin Lab</h1>
-        <p>1:1 Humanoid Crash Dummy Mirror</p>
-      </div>
-    </div>
-    <div id="status-badge" class="status-pill">
-      <span class="pulse-dot"></span>
-      <span id="status-text">IDLE / TRACKING</span>
-    </div>
-  </div>
-
-  <!-- Top-Right HUD: Telemetry Metrics -->
-  <div id="hud-telemetry" class="hud-panel">
-    <div class="metric-item">
-      <span class="metric-label">Viewport FPS</span>
-      <span id="metric-fps" class="metric-val">60</span>
-    </div>
-    <div class="metric-item">
-      <span class="metric-label">CV Engine</span>
-      <span id="metric-engine" class="metric-val" style="font-size: 14px; margin-top: 3px;">Edge WASM (60 FPS)</span>
-    </div>
-    <div class="metric-item">
-      <span class="metric-label">A100 Cloud AI</span>
-      <span id="metric-cloud" class="metric-val" style="font-size: 14px; margin-top: 3px; color: var(--accent-cyan);">A100 Active</span>
-    </div>
-    <div class="metric-item">
-      <span class="metric-label">Filter</span>
-      <span id="metric-filter" class="metric-val" style="font-size: 14px; margin-top: 3px; color: var(--accent-green);">1€ Active</span>
-    </div>
-  </div>
-
-  <!-- Bottom-Left HUD: Voice & Gesture Command Telemetry -->
-  <div id="hud-commands" class="hud-panel">
-    <div class="command-row">
-      <div class="cmd-desc">
-        <span>🎙️</span>
-        <span>Voice:</span>
-      </div>
-      <span id="voice-text" class="tag-badge" style="color: var(--accent-cyan);">Listening ("piano mode")</span>
-    </div>
-
-    <div class="command-row" style="margin-top: 4px;">
-      <div class="cmd-desc">
-        <span>✌️</span>
-        <span>Gesture:</span>
-      </div>
-      <span id="gesture-label" class="tag-badge">Raise 2 Fingers (Hold 1.0s)</span>
-    </div>
-
-    <!-- 1-Second Hold Visual Gauge -->
-    <div class="progress-bar-container">
-      <div id="gesture-progress" class="progress-bar-fill"></div>
-    </div>
-  </div>
-
-  <!-- Bottom Toolbar: Interactive Controls -->
-  <div id="hud-toolbar" class="hud-panel">
-    <button id="btn-camera" class="btn-cyber primary">📷 Start Camera</button>
-    <button id="btn-piano" class="btn-cyber">🎹 Toggle Piano</button>
-    <button id="btn-piano-up" class="btn-cyber" title="Raise Piano">▲ Up</button>
-    <button id="btn-piano-down" class="btn-cyber" title="Lower Piano">▼ Down</button>
-    <button id="btn-recenter" class="btn-cyber">🎯 Reset View</button>
-  </div>
-
-  <!-- Bottom-Right: Picture-in-Picture Webcam Mirror -->
-  <div id="pip-camera-container" class="hud-panel">
-    <video id="webcam-video" playsinline></video>
-  </div>
-
-  <script type="module" src="main.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

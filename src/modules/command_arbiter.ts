@@ -1,29 +1,54 @@
+import type { LandmarkPoint } from './one_euro_filter';
+
 /**
  * Dual Command Engine & Interaction Arbiter
  * Coordinates Voice Commands (Primary) and Hand Gestures (Secondary)
  * Eliminates race conditions with temporal debounce and 2-second suppression locks.
  */
 
+export interface CommandArbiterOptions {
+  onStateChange?: (newState: 'IDLE' | 'PIANO_MODE', source: string) => void;
+  onProgressUpdate?: (progressPercent: number) => void;
+  onVoiceTranscript?: (phrase: string) => void;
+  onListeningStatus?: (isListening: boolean) => void;
+}
+
 export class CommandArbiter {
-  constructor(options = {}) {
+  onStateChange: (newState: 'IDLE' | 'PIANO_MODE', source: string) => void;
+  onProgressUpdate: (progressPercent: number) => void;
+  onVoiceTranscript: (phrase: string) => void;
+  onListeningStatus: (isListening: boolean) => void;
+
+  state: 'IDLE' | 'PIANO_MODE';
+  gestureHoldStart: number | null;
+  requiredHoldTimeMs: number;
+  cooldownUntil: number;
+  speechRecognition: any | null;
+  isListening: boolean;
+  destroyed: boolean;
+
+  constructor(options: CommandArbiterOptions = {}) {
     this.onStateChange = options.onStateChange || (() => {});
     this.onProgressUpdate = options.onProgressUpdate || (() => {});
     this.onVoiceTranscript = options.onVoiceTranscript || (() => {});
+    this.onListeningStatus = options.onListeningStatus || (() => {});
 
-    this.state = "IDLE"; // "IDLE" or "PIANO_MODE"
+    this.state = 'IDLE';
     this.gestureHoldStart = null;
-    this.requiredHoldTimeMs = 1000; // 1.0 second hold required
-    this.cooldownUntil = 0; // Epoch timestamp for gesture suppression
+    this.requiredHoldTimeMs = 1000;
+    this.cooldownUntil = 0;
     this.speechRecognition = null;
     this.isListening = false;
+    this.destroyed = false;
 
     this.initSpeech();
   }
 
   initSpeech() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn("Web Speech API not supported in this browser. Falling back to gestures.");
+      this.onListeningStatus(false);
       return;
     }
 
@@ -33,67 +58,96 @@ export class CommandArbiter {
       this.speechRecognition.interimResults = false;
       this.speechRecognition.lang = 'en-US';
 
-      this.speechRecognition.onresult = (event) => {
+      this.speechRecognition.onresult = (event: any) => {
+        if (this.destroyed) return;
         const lastResult = event.results[event.results.length - 1];
         if (lastResult.isFinal) {
           const transcript = lastResult[0].transcript.trim().toLowerCase();
-          console.log("[Voice Command Detected]:", transcript);
           this.onVoiceTranscript(transcript);
           this.handleVoiceCommand(transcript);
         }
       };
 
-      this.speechRecognition.onerror = (e) => {
-        console.warn("[Speech Error]:", e.error);
+      this.speechRecognition.onerror = (e: any) => {
+        if (e.error === 'not-allowed') {
+          this.isListening = false;
+          this.onListeningStatus(false);
+        }
       };
 
       this.speechRecognition.onend = () => {
-        if (this.isListening) {
+        if (this.isListening && !this.destroyed) {
           try {
             this.speechRecognition.start();
           } catch (err) {}
+        } else {
+          this.onListeningStatus(false);
         }
       };
 
       this.startListening();
     } catch (e) {
-      console.warn("Speech init exception:", e);
+      this.onListeningStatus(false);
     }
   }
 
   startListening() {
-    if (this.speechRecognition && !this.isListening) {
+    if (this.speechRecognition && !this.isListening && !this.destroyed) {
       try {
         this.speechRecognition.start();
         this.isListening = true;
+        this.onListeningStatus(true);
       } catch (err) {}
     }
   }
 
-  handleVoiceCommand(transcript) {
-    // Voice has instant, absolute priority (Supports both English and Romanian)
+  stopListening() {
+    if (this.speechRecognition && this.isListening) {
+      this.isListening = false;
+      try {
+        this.speechRecognition.stop();
+      } catch (err) {}
+      this.onListeningStatus(false);
+    }
+  }
+
+  handleVoiceCommand(transcript: string) {
     const isPianoStart = [
-      "piano mode", "start piano", "activate piano", "play piano", "piano",
-      "deschide pianul", "porneste pianul", "mod pian", "pian"
-    ].some(k => transcript.includes(k));
+      'piano mode',
+      'start piano',
+      'activate piano',
+      'play piano',
+      'piano',
+      'deschide pianul',
+      'porneste pianul',
+      'mod pian',
+      'pian'
+    ].some((k) => transcript.includes(k));
 
     const isPianoStop = [
-      "stop piano", "exit piano", "close piano", "stop", "exit",
-      "opreste pianul", "inchide pianul", "gata", "opreste"
-    ].some(k => transcript.includes(k));
+      'stop piano',
+      'exit piano',
+      'close piano',
+      'stop',
+      'exit',
+      'opreste pianul',
+      'inchide pianul',
+      'gata',
+      'opreste'
+    ].some((k) => transcript.includes(k));
 
-    const isReset = [
-      "reset", "calibrate", "recenter", "reseteaza", "calibreaza"
-    ].some(k => transcript.includes(k));
+    const isReset = ['reset', 'calibrate', 'recenter', 'reseteaza', 'calibreaza'].some((k) =>
+      transcript.includes(k)
+    );
 
     if (isPianoStart && !isPianoStop) {
-      this.setSystemState("PIANO_MODE", "VOICE");
+      this.setSystemState('PIANO_MODE', 'VOICE');
       this.engageCooldown(2000);
     } else if (isPianoStop) {
-      this.setSystemState("IDLE", "VOICE");
+      this.setSystemState('IDLE', 'VOICE');
       this.engageCooldown(2000);
     } else if (isReset) {
-      this.setSystemState("IDLE", "VOICE");
+      this.setSystemState('IDLE', 'VOICE RESET');
       this.engageCooldown(1500);
     }
   }
@@ -104,21 +158,16 @@ export class CommandArbiter {
     this.onProgressUpdate(0);
   }
 
-  setSystemState(newState, source = "SYSTEM") {
+  setSystemState(newState: 'IDLE' | 'PIANO_MODE', source = 'SYSTEM') {
     if (this.state !== newState) {
       this.state = newState;
-      console.log(`[State Transition] -> ${newState} (via ${source})`);
       this.onStateChange(this.state, source);
     }
   }
 
-  /**
-   * Evaluate two-finger raised gesture from MediaPipe hand landmarks
-   */
-  evaluateGesture(handLandmarks) {
+  evaluateGesture(handLandmarks: LandmarkPoint[] | null | undefined) {
     const now = Date.now();
 
-    // 1. If currently in cooldown, suppress all gestures
     if (now < this.cooldownUntil) {
       this.gestureHoldStart = null;
       this.onProgressUpdate(0);
@@ -131,11 +180,6 @@ export class CommandArbiter {
       return;
     }
 
-    // Hand geometry check:
-    // Landmark 8: Index Tip, Landmark 6: Index PIP
-    // Landmark 12: Middle Tip, Landmark 10: Middle PIP
-    // Landmark 16: Ring Tip, Landmark 14: Ring PIP
-    // Landmark 20: Pinky Tip, Landmark 18: Pinky PIP
     const indexExtended = handLandmarks[8].y < handLandmarks[6].y;
     const middleExtended = handLandmarks[12].y < handLandmarks[10].y;
     const ringCurled = handLandmarks[16].y > handLandmarks[14].y;
@@ -152,14 +196,18 @@ export class CommandArbiter {
       this.onProgressUpdate(progress);
 
       if (elapsed >= this.requiredHoldTimeMs) {
-        // Toggle or activate piano mode
-        const targetState = this.state === "PIANO_MODE" ? "IDLE" : "PIANO_MODE";
-        this.setSystemState(targetState, "GESTURE (2-Finger Hold)");
-        this.engageCooldown(2500); // 2.5s lock prevents rapid loop
+        const targetState = this.state === 'PIANO_MODE' ? 'IDLE' : 'PIANO_MODE';
+        this.setSystemState(targetState, '2-FINGER HOLD');
+        this.engageCooldown(2500);
       }
     } else {
       this.gestureHoldStart = null;
       this.onProgressUpdate(0);
     }
+  }
+
+  destroy() {
+    this.destroyed = true;
+    this.stopListening();
   }
 }
